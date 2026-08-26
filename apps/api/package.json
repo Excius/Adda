@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js"
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
   },
   "keywords": [],
   "author": "",

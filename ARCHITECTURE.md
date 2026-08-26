@@ -28,23 +28,23 @@ Mediasoup architecture relies on 5 primary server-side entities:
 
 ## ⚙️ Efficient Usage & Scaling Guidelines
 
-* **1 Worker per CPU Core**: Instantiate one `mediasoup.Worker` per physical CPU core for maximum throughput and parallel processing.
-* **1 Router per Room**: Map each active room to a single `Router` instance to handle intra-room media routing efficiently.
-* **Separate Transports per Direction**: Create distinct WebRtcTransports for producing (`c2s`) and consuming (`s2c`). Key them using `${userId}:${direction}` on the server to prevent collision.
-* **Pause / Resume Pattern**: Create consumers in a `paused: true` state to avoid sending media packets before the client-side consumer transport is connected. Explicitly invoke `resumeConsumer` once the client is ready.
+- **1 Worker per CPU Core**: Instantiate one `mediasoup.Worker` per physical CPU core for maximum throughput and parallel processing.
+- **1 Router per Room**: Map each active room to a single `Router` instance to handle intra-room media routing efficiently.
+- **Separate Transports per Direction**: Create distinct WebRtcTransports for producing (`c2s`) and consuming (`s2c`). Key them using `${userId}:${direction}` on the server to prevent collision.
+- **Pause / Resume Pattern**: Create consumers in a `paused: true` state to avoid sending media packets before the client-side consumer transport is connected. Explicitly invoke `resumeConsumer` once the client is ready.
 
 ---
 
 ## 🔄 Step-by-Step Connection & Signaling Flow
 
-```
+```text
 Client (Next.js)                                         Server (Express + Socket.IO + Mediasoup)
        │                                                                   │
        ├───────────────────── 1. joinRoom ────────────────────────────────►│ (Create Peer in Redis)
        │◄──────────────────── { success: true } ───────────────────────────┤
        │                                                                   │
-       ├───────────────────── 2. getRouterRtpCapabilities ───────────►│ (Fetch Room Router RTP Caps)
-       │◄──────────────────── { data: rtpCapabilities } ──────────────────┤
+       ├───────────────────── 2. getRouterRtpCapabilities ─────────────────►│ (Fetch Room Router RTP Caps)
+       │◄──────────────────── { data: rtpCapabilities } ────────────────────┤
        │ (device.load({ routerRtpCapabilities }))                          │
        │                                                                   │
        ├───────────────────── 3. createTransport (direction: "c2s") ──────►│ (createWebRtcTransport "c2s")
@@ -52,7 +52,7 @@ Client (Next.js)                                         Server (Express + Socke
        │ (initSendTransport)                                               │
        │                                                                   │
        ├─── producerTransport.on("connect") ──────────────────────────────►│
-       │    socket.emitWithAck("connectTransport", { direction: "c2s" })     │ (transport.connect({ dtlsParameters }))
+       │    socket.emitWithAck("connectTransport", { direction: "c2s" })   │ (transport.connect({ dtlsParameters }))
        │◄──────────────────── { success: true } ───────────────────────────┤
        │                                                                   │
        ├─── producerTransport.on("produce") ──────────────────────────────►│
@@ -65,16 +65,16 @@ Client (Next.js)                                         Server (Express + Socke
        │ (initRecvTransport)                                               │
        │                                                                   │
        ├─── consumerTransport.on("connect") ──────────────────────────────►│
-       │    socket.emitWithAck("connectTransport", { direction: "s2c" })     │ (transport.connect({ dtlsParameters }))
+       │    socket.emitWithAck("connectTransport", { direction: "s2c" })   │ (transport.connect({ dtlsParameters }))
        │◄──────────────────── { success: true } ───────────────────────────┤
        │                                                                   │
        ├─ (On "existingProducers" or "newProducer" event)                  │
        │                                                                   │
-       ├───────────────────── 5. consume { producerId } ───────────────►│ (router.canConsume & transport.consume)
-       │◄──────────────────── { data: consumerParams } ────────────────────┤
-       │ (consumerTransport.consume(consumerParams))                      │
+       ├───────────────────── 5. consume { producerId } ───────────────────►│ (router.canConsume & transport.consume)
+       │◄──────────────────── { data: consumerParams } ─────────────────────┤
+       │ (consumerTransport.consume(consumerParams))                       │
        │                                                                   │
-       ├───────────────────── 6. resumeConsumer { consumerId } ──────────►│ (consumer.resume())
+       ├───────────────────── 6. resumeConsumer { consumerId } ────────────►│ (consumer.resume())
        │◄──────────────────── { success: true } ───────────────────────────┤
        │                                                                   │
        └─── 🎵 Audio stream starts playing via HTMLAudioElement ───────────┘
@@ -85,6 +85,7 @@ Client (Next.js)                                         Server (Express + Socke
 ## 🛠️ Step-by-Step Breakdown
 
 ### Phase 1: Capabilities & Device Loading
+
 1. **`joinRoom`**: Client joins a room with `roomId` and `name`. Server registers the socket in Redis and creates a room `Router` if it doesn't already exist.
 2. **`getRouterRtpCapabilities`**: Client requests `rtpCapabilities` from the room's `Router`.
 3. **`device.load`**: Client initializes `mediasoupClient.Device` and loads the router's RTP capabilities to ensure codec compatibility (e.g. `audio/opus`).
@@ -92,6 +93,7 @@ Client (Next.js)                                         Server (Express + Socke
 ---
 
 ### Phase 2: Producer Transport (`c2s`)
+
 1. **`createTransport` (`direction: "c2s"`)**: Server creates a send `WebRtcTransport` on the room's Router and returns ICE/DTLS parameters.
 2. **`initSendTransport`**: Client instantiates `producerTransport` using `device.createSendTransport`.
 3. **`connectTransport`**: When media production begins, `producerTransport` triggers its `connect` event. Client sends DTLS parameters to the server to finalize the WebRTC handshake.
@@ -100,6 +102,7 @@ Client (Next.js)                                         Server (Express + Socke
 ---
 
 ### Phase 3: Consumer Transport (`s2c`) & Stream Consumption
+
 1. **`createTransport` (`direction: "s2c"`)**: Server creates a receive `WebRtcTransport` for the client.
 2. **`initRecvTransport`**: Client instantiates `consumerTransport` using `device.createRecvTransport`.
 3. **`connectTransport`**: Client connects the consumer transport by signaling DTLS parameters with `direction: "s2c"`.
@@ -114,6 +117,7 @@ Client (Next.js)                                         Server (Express + Socke
 ## 🧹 Disconnect & Cleanup Flow
 
 When a client closes the browser or leaves the room:
+
 1. Socket disconnects (`socket.on("disconnect")`).
 2. Server removes peer mappings from Redis (`removePeerFromRoom`, `removePeer`).
 3. Server closes associated `Producer` and `Transport` instances.

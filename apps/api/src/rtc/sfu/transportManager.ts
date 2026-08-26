@@ -1,4 +1,4 @@
-import { env } from "../../utils/config.js";
+import { env } from "../../config/config.js";
 import { getRouter } from "./routerManager.js";
 import type { Transport, DtlsParameters } from "@repo/types";
 
