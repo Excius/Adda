@@ -3,22 +3,25 @@ import { WorkerManager } from "./worker.manager.js";
 import { mediaCodecs } from "./mediasoup.config.js";
 
 export class RouterManager {
-  private readonly routers = new Map<string, Router>();
-  private readonly creationPromises = new Map<string, Promise<Router>>();
+  private readonly routers = new Map<string, Router>(); // roomId -> Router
+  private readonly creationPromises = new Map<string, Promise<Router>>(); // roomId -> Router Promise
 
   constructor(private readonly workerManager: WorkerManager) {}
 
   async create(roomId: string): Promise<Router> {
+    // Check the existing router for the room
     const existing = this.routers.get(roomId);
     if (existing) {
       return existing;
     }
 
+    // If already in the creation pipeline
     const pending = this.creationPromises.get(roomId);
     if (pending) {
       return pending;
     }
 
+    // router creation
     const creation = this.createRouter();
 
     this.creationPromises.set(roomId, creation);
@@ -27,6 +30,10 @@ export class RouterManager {
       const router = await creation;
 
       this.routers.set(roomId, router);
+
+      router.on("workerclose", () => {
+        this.routers.delete(roomId);
+      });
 
       return router;
     } finally {

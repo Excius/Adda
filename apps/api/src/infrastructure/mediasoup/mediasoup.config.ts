@@ -1,4 +1,8 @@
-import { RouterRtpCodecCapability } from "mediasoup/types";
+import {
+  RouterRtpCodecCapability,
+  WebRtcTransportOptions,
+} from "mediasoup/types";
+import { env } from "../../config/config.js";
 
 export const mediaCodecs: RouterRtpCodecCapability[] = [
   {
@@ -18,3 +22,15 @@ export const mediaCodecs: RouterRtpCodecCapability[] = [
     },
   },
 ];
+
+export const transportOptions: WebRtcTransportOptions = {
+  listenIps: [
+    {
+      ip: "0.0.0.0",
+      announcedIp: env.ANNOUNCED_IP,
+    },
+  ],
+  enableUdp: true,
+  enableTcp: false,
+  preferUdp: true,
+};
