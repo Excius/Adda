@@ -1,5 +1,5 @@
 import pino from "pino";
-import { env } from "./config.js";
+import { env } from "../../config/config.js";
 
 const isProduction = env.NODE_ENV === "production";
 const logger = pino(

@@ -1,6 +1,6 @@
 import express from "express";
 import { Request, Response } from "express";
-import { logger } from "./utils/logger.js";
+import { logger } from "../infrastructure/logger/logger.js";
 const app: express.Express = express();
 const startTime = Date.now();
 

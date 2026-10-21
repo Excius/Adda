@@ -18,8 +18,6 @@ RUN pnpm --filter api build
 
 WORKDIR /app/apps/api
 
-ENV NODE_ENV=production
-
 EXPOSE 8080
 
 CMD ["pnpm", "start"]

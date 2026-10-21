@@ -1,5 +1,16 @@
 # Adda
 
+<!--toc:start-->
+
+- [Adda](#adda)
+  - [Repository Structure](#repository-structure)
+  - [Quick Start](#quick-start)
+    - [1. Install Dependencies](#1-install-dependencies)
+    - [2. Run Development Servers](#2-run-development-servers)
+    - [3. Build & Typecheck](#3-build-typecheck)
+  - [Architecture & WebRTC Flow](#architecture-webrtc-flow)
+  <!--toc:end-->
+
 Adda is a multi-party WebRTC audio platform powered by **Mediasoup**, **Socket.IO**, **Next.js**, and **Redis** in a Turborepo monorepo.
 
 ---

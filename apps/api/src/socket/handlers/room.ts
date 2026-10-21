@@ -1,17 +1,16 @@
 import { Server, Socket } from "socket.io";
 import { randomUUID } from "crypto";
-import {
-  createPeer,
-  addPeerToRoom,
-  getPeersInRoom,
-  getPeer,
-  type PeerData,
-} from "../../services/redis.js";
-import { logger } from "../../utils/logger.js";
+import { logger } from "../../infrastructure/logger/logger.js";
 import { initRouterForRoom } from "../../rtc/sfu/routerManager.js";
 import { getConsumableProducers } from "../../rtc/sfu/index.js";
+import { RoomService } from "../../services/room.service.js";
+import { PeerData } from "@repo/types";
 
-export const handleRoomEvents = (io: Server, socket: Socket) => {
+export const handleRoomEvents = (
+  io: Server,
+  socket: Socket,
+  roomService: RoomService,
+) => {
   // Event 2.1: Client sends { roomId, name }
   socket.on(
     "joinRoom",
@@ -26,8 +25,11 @@ export const handleRoomEvents = (io: Server, socket: Socket) => {
         const peerId = randomUUID();
 
         // 2. Store in Redis
-        await createPeer(peerId, { socketId: socket.id, roomId, name });
-        await addPeerToRoom(roomId, peerId);
+        await roomService.joinRoom(peerId, {
+          socketId: socket.id,
+          roomId,
+          name,
+        });
 
         // 3. Join the actual Socket.IO room for broadcasting
         socket.join(roomId);
@@ -36,14 +38,14 @@ export const handleRoomEvents = (io: Server, socket: Socket) => {
         await initRouterForRoom(roomId);
 
         // 4. Fetch existing peers in the room
-        const peerIds = await getPeersInRoom(roomId);
+        const peerIds = await roomService.peersByRoom(roomId);
 
         //TODO : Add Redis-lua script to avoid race condition for leave and join
         // Faster way:
         const peerPromises = peerIds
           .filter((id) => id !== peerId)
           .map(async (id) => {
-            const data = await getPeer(id);
+            const data = await roomService.peerById(id);
             return data ? { peerId: id, ...data } : null;
           });
 

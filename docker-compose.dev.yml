@@ -1,15 +1,49 @@
 services:
   redis:
     image: redis:8-alpine
-
     ports:
       - "6379:6379"
+    networks:
+      - adda_network
 
   redisinsight:
     image: redis/redisinsight:latest
-
     ports:
       - "5540:5540"
-
     depends_on:
       - redis
+    networks:
+      - adda_network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - apps/api/.env
+    ports:
+      - "8080:8080"
+      - "40000-40100:40000-40100/udp"
+    depends_on:
+      - redis
+    networks:
+      - adda_network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SOCKET_URL: http://localhost:8080
+    env_file:
+      - apps/web/.env.local
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - adda_network
+
+networks:
+  adda_network:
+    driver: bridge

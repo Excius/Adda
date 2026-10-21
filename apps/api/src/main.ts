@@ -1,29 +1,38 @@
-import app from "./app.js";
+import app from "./app/app.js";
 import http from "node:http";
 import { Server } from "socket.io";
 import { initializeSocket } from "./socket/index.js";
-import { env } from "./utils/config.js";
-import { logger } from "./utils/logger.js";
-import { initWorker } from "./rtc/sfu/workerManager.js";
+import { env } from "./config/config.js";
+import { logger } from "./infrastructure/logger/logger.js";
 
 const PORT = env.API_PORT || 3000;
 var isShuttingDown: boolean = false;
 
-const server: http.Server = app.listen(PORT, () => {
-  logger.info(`API server is running on http://localhost:${PORT}`);
-});
+async function bootstrap() {
+  await redis.connect();
 
-await initWorker();
+  const peerRepository = new PeerRepository(redis.getClient());
 
-export const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
-});
+  const roomService = new RoomService(peerRepository);
 
-initializeSocket(io);
+  const server: http.Server = app.listen(PORT, () => {
+    logger.info(`API server is running on http://localhost:${PORT}`);
+  });
 
-setupGracefulShutdown(server);
+  await initWorker();
+
+  const io = new Server(server, {
+    cors: {
+      origin: "*",
+    },
+  });
+
+  initializeSocket(io, roomService);
+
+  setupGracefulShutdown(server);
+}
+
+await bootstrap();
 
 function setupGracefulShutdown(server: http.Server) {
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM", server));
@@ -53,6 +62,8 @@ function gracefulShutdown(signal: string, server: http.Server) {
     logger.warn("Server not initialized, exiting immidiately");
     process.exit(0);
   }
+
+  redis.disconnect();
 
   server.close((err?: Error) => {
     if (err) {

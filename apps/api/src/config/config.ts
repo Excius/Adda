@@ -3,9 +3,11 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production"]).default("development"),
-  API_PORT: z.coerce.number().default(8080),
+  API_PORT: z.coerce.number(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   ANNOUNCED_IP: z.string(),
+  MEDIASOUP_RTC_MIN_PORT: z.int(),
+  MEDIASOUP_RTC_MAX_PORT: z.int(),
 });
 
 const parsed = envSchema.safeParse(process.env);
