@@ -7,6 +7,7 @@ type PeerConsumerState = {
   consumer: Consumer;
   peerId: string;
   producerId: string;
+  transportId: string;
 };
 
 export class ConsumerManager {
@@ -30,7 +31,7 @@ export class ConsumerManager {
     roomId: string,
     producerId: string,
     rtpCapabilities: RtpCapabilities,
-  ): Promise<Consumer> {
+  ): Promise<string> {
     const router = this.routerManager.get(roomId);
 
     const producerEntry = this.producerManager.getProducerById(producerId);
@@ -58,24 +59,30 @@ export class ConsumerManager {
       paused: true, // always start paused
     });
 
-    this.addConsumer(consumer, peerId, producerId);
+    this.addConsumer(consumer, peerId, producerId, transport.id);
 
     // If the producer closes, automatically close every consumer consuming it
     producerEntry.producer.on("@close", () => {
       consumer.close();
     });
 
-    return consumer;
+    return consumer.id;
   }
 
   private addConsumer(
     consumer: Consumer,
     peerId: string,
     producerId: string,
+    transportId: string,
   ): void {
     const consumerId = consumer.id;
 
-    this.consumers.set(consumerId, { consumer, peerId, producerId });
+    this.consumers.set(consumerId, {
+      consumer,
+      peerId,
+      producerId,
+      transportId,
+    });
 
     let peerConsumerIds = this.peerConsumers.get(peerId);
     if (!peerConsumerIds) {
@@ -128,5 +135,35 @@ export class ConsumerManager {
     if (!entry) throw new Error("Consumer not found");
 
     return await entry.consumer.resume();
+  }
+
+  getConsumerById(consumerId: string) {
+    return this.consumers.get(consumerId);
+  }
+
+  exists(consumerId: string) {
+    return this.consumers.has(consumerId);
+  }
+
+  close(consumerId: string) {
+    const entry = this.consumers.get(consumerId);
+    if (!entry) throw new Error("Consumer not found");
+
+    entry.consumer.close();
+  }
+
+  closeForTranport(transportId: string): void {
+    for (const entry of this.consumers.values()) {
+      if (entry.transportId === transportId) entry.consumer.close();
+    }
+  }
+
+  closeForPeer(peerId: string) {
+    const consumerIds = this.peerConsumers.get(peerId);
+    if (!consumerIds) return;
+
+    for (const consumerId of consumerIds) {
+      this.consumers.get(consumerId)?.consumer.close();
+    }
   }
 }

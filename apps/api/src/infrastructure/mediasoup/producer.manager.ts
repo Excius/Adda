@@ -5,6 +5,7 @@ type PeerProducerState = {
   producer: Producer;
   roomId: string;
   peerId: string;
+  transportId: string;
 };
 
 export class ProducerManager {
@@ -32,7 +33,7 @@ export class ProducerManager {
       rtpParameters,
     });
 
-    this.addProducer(producer, peerId, roomId);
+    this.addProducer(producer, peerId, roomId, transport.id);
 
     return producer.id;
   }
@@ -41,11 +42,12 @@ export class ProducerManager {
     producer: Producer,
     peerId: string,
     roomId: string,
+    transportId: string,
   ): void {
     const producerId = producer.id;
 
     // producers
-    this.producers.set(producerId, { producer, peerId, roomId });
+    this.producers.set(producerId, { producer, peerId, roomId, transportId });
 
     // peer
     let peerProducersIds = this.peerProducers.get(peerId);
@@ -97,5 +99,31 @@ export class ProducerManager {
 
   getProducerById(producerId: string): PeerProducerState | undefined {
     return this.producers.get(producerId);
+  }
+
+  exists(producerId: string) {
+    return this.producers.has(producerId);
+  }
+
+  close(producerId: string) {
+    const entry = this.producers.get(producerId);
+    if (!entry) throw new Error("Prodcuer not found");
+
+    entry.producer.close();
+  }
+
+  closeForTranport(transportId: string): void {
+    for (const entry of this.producers.values()) {
+      if (entry.transportId === transportId) entry.producer.close();
+    }
+  }
+
+  closeForPeer(peerId: string) {
+    const producerIds = this.peerProducers.get(peerId);
+    if (!producerIds) return;
+
+    for (const producerId of producerIds) {
+      this.producers.get(producerId)?.producer.close();
+    }
   }
 }

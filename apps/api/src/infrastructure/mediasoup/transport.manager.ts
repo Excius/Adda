@@ -1,15 +1,15 @@
-import type { Transport } from "mediasoup/types";
+import type { DtlsParameters, WebRtcTransport } from "mediasoup/types";
 import { RouterManager } from "./router.manager.js";
 import { transportOptions } from "./mediasoup.config.js";
 
-type TransportDirection = "send" | "recv";
+export type TransportDirection = "send" | "recv";
 
 type PeerTransportState = {
   generation: number;
 
-  transports: Map<TransportDirection, Transport>;
+  transports: Map<TransportDirection, WebRtcTransport>;
 
-  creationPromise: Map<TransportDirection, Promise<Transport>>;
+  creationPromise: Map<TransportDirection, Promise<WebRtcTransport>>;
 };
 
 export class TransportManager {
@@ -67,7 +67,7 @@ export class TransportManager {
     peerId: string,
     direction: TransportDirection,
     roomId: string,
-  ): Promise<Transport> {
+  ): Promise<WebRtcTransport> {
     const state = this.getOrCreateState(peerId);
 
     const existing = state.transports.get(direction);
@@ -108,7 +108,7 @@ export class TransportManager {
     }
   }
 
-  get(peerId: string, direction: TransportDirection): Transport {
+  get(peerId: string, direction: TransportDirection): WebRtcTransport {
     const state = this.peers.get(peerId);
     if (!state) {
       throw new Error(`No Transport state found for peer ${peerId}`);
@@ -160,9 +160,19 @@ export class TransportManager {
     this.cleanupPeerState(peerId, state);
   }
 
-  private async createTransport(roomId: string): Promise<Transport> {
+  async connect(
+    peerId: string,
+    roomId: string,
+    direction: TransportDirection,
+    dtlsParameters: DtlsParameters,
+  ) {
+    const transport = this.get(peerId, direction);
+    await transport.connect({ dtlsParameters });
+  }
+
+  private async createTransport(roomId: string): Promise<WebRtcTransport> {
     const router = this.routerManager.get(roomId);
 
-    return await router.createWebRtcTransport(transportOptions);
+    return router.createWebRtcTransport(transportOptions);
   }
 }

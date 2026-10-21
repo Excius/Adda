@@ -4,10 +4,6 @@ import { Server } from "socket.io";
 import { initializeSocket } from "./socket/index.js";
 import { env } from "./config/config.js";
 import { logger } from "./infrastructure/logger/logger.js";
-import { initWorker } from "./rtc/sfu/workerManager.js";
-import { redis } from "./lib/redis.js";
-import { PeerRepository } from "./repositories/peer.repository.js";
-import { RoomService } from "./services/room.service.js";
 
 const PORT = env.API_PORT || 3000;
 var isShuttingDown: boolean = false;

@@ -3,5 +3,4 @@ export interface Producer {
   peerId: string;
   roomId: string;
   kind: "audio" | "video";
-  routerId: string;
 }

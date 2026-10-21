@@ -1,31 +1,26 @@
 import { Server } from "socket.io";
 import { handleRoomEvents } from "./handlers/room.js";
-import {
-  getPeerBySocket,
-  getPeer,
-  removePeerFromRoom,
-  removePeer,
-} from "../services/redis.js";
-import { logger } from "../utils/logger.js";
+import { logger } from "../infrastructure/logger/logger.js";
 import { handleTransportevents } from "./handlers/transport.js";
 import { handleConsume } from "./handlers/consume.js";
 import { handleProduce } from "./handlers/produce.js";
+import { RoomService } from "../modules/room/room.service.js";
 
-export const initializeSocket = (io: Server) => {
+export const initializeSocket = (io: Server, roomService: RoomService) => {
   io.on("connection", (socket) => {
     logger.info(`⚡ New socket connection: ${socket.id}`);
 
     // Attach the room handlers (joinRoom)
-    handleRoomEvents(io, socket);
+    handleRoomEvents(io, socket, roomService);
 
     // Handle the transport creation
-    handleTransportevents(io, socket);
+    handleTransportevents(io, socket, roomService);
 
     // Handle the consume requests
-    handleConsume(io, socket);
+    handleConsume(io, socket, roomService);
 
     // Handle the produce requests
-    handleProduce(io, socket);
+    handleProduce(io, socket, roomService);
 
     //  3: Disconnect Cleanup
     socket.on("disconnect", async () => {
@@ -33,26 +28,15 @@ export const initializeSocket = (io: Server) => {
       // TODO: Need to remove the trasnport, consumer, producer for the respecive user
       try {
         // 1. Get peerId using the socket lookup key
-        const peerId = await getPeerBySocket(socket.id);
+        const peerId = await roomService.peerBySocket(socket.id);
+        const peer = await roomService.leaveRoom(peerId);
 
-        if (peerId) {
-          // 2. Get the peer's data so we know which room to notify
-          const peerData = await getPeer(peerId);
+        if (peer) {
+          io.to(peer.roomId).emit("userLeft", { peerId });
 
-          if (peerData && peerData.roomId) {
-            const { roomId } = peerData;
-
-            // 3. Remove them from the room's Set in Redis
-            await removePeerFromRoom(roomId, peerId);
-
-            // 4. Delete their Hash and Socket mapping in Redis
-            await removePeer(peerId);
-
-            // 5. Notify everyone else in the room
-            io.to(roomId).emit("userLeft", { peerId });
-
-            logger.info(`🧹 Cleaned up peer [${peerId}] from room [${roomId}]`);
-          }
+          logger.info(
+            `🧹 Cleaned up peer [${peerId}] from room [${peer.roomId}]`,
+          );
         }
       } catch (error) {
         logger.error("🔴 Error during disconnect cleanup: %s", error);

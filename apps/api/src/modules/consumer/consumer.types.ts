@@ -4,5 +4,4 @@ export interface Consumer {
   roomId: string;
   producerId: string;
   kind: "audio" | "video";
-  routerId: string;
 }

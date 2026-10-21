@@ -19,7 +19,6 @@ export class ProducerRepository {
       peerId: data.peerId,
       roomId: data.roomId,
       kind: data.kind,
-      routerId: data.routerId,
     } as Producer;
   }
 
@@ -38,7 +37,6 @@ export class ProducerRepository {
       peerId: producer.peerId,
       roomId: producer.roomId,
       kind: producer.kind,
-      routerId: producer.routerId,
     });
 
     tx.sadd(keys.peerProducers(producer.peerId), producer.id);

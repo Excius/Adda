@@ -3,12 +3,16 @@ import {
   createWebRtcTransport,
   connectTransport,
 } from "../../rtc/sfu/index.js";
-import { getPeerBySocket } from "../../services/redis.js";
-import { logger } from "../../utils/logger.js";
+import { logger } from "../../infrastructure/logger/logger.js";
 import { getRouterCapabilities } from "../../rtc/sfu/routerManager.js";
 import { DtlsParameters } from "@repo/types";
+import { RoomService } from "../../services/room.service.js";
 
-export const handleTransportevents = (io: Server, socket: Socket) => {
+export const handleTransportevents = (
+  io: Server,
+  socket: Socket,
+  roomService: RoomService,
+) => {
   socket.on(
     "getRouterRtpCapabilities",
     ({ roomId }: { roomId: string }, callback) => {
@@ -39,7 +43,7 @@ export const handleTransportevents = (io: Server, socket: Socket) => {
       callback,
     ) => {
       try {
-        const userId = await getPeerBySocket(socket.id);
+        const userId = await roomService.peerBySocket(socket.id);
         if (!userId) {
           throw new Error("No peerId associated with socket id");
         }
@@ -81,7 +85,7 @@ export const handleTransportevents = (io: Server, socket: Socket) => {
       callback,
     ) => {
       try {
-        const userId = await getPeerBySocket(socket.id);
+        const userId = await roomService.peerBySocket(socket.id);
         if (!userId) {
           throw new Error("No peerId associated with socket id");
         }

@@ -21,7 +21,6 @@ export class ConsumerRepository {
       roomId: data.roomId,
       producerId: data.producerId,
       kind: data.kind,
-      routerId: data.routerId,
     } as Consumer;
   }
 
@@ -52,11 +51,11 @@ export class ConsumerRepository {
     tx.sadd(keys.producerConsumers(consumer.producerId), consumer.id);
   }
 
-  remove(tx: ChainableCommander, consumer: Consumer): void {
-    tx.del(keys.consumer(consumer.id));
+  remove(tx: ChainableCommander, consumerId: string): void {
+    tx.del(keys.consumer(consumerId));
 
-    tx.srem(keys.peerConsumers(consumer.peerId), consumer.id);
+    tx.srem(keys.peerConsumers(consumerId), consumerId);
 
-    tx.srem(keys.producerConsumers(consumer.producerId), consumer.id);
+    tx.srem(keys.producerConsumers(consumerId), consumerId);
   }
 }
